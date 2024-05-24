@@ -24,6 +24,15 @@ export async function handler(
         body: JSON.stringify({}),
       };
     }
+  } else if (event.resource === "/products/{id}") {
+    const productId = event.pathParameters!.id;
+
+    console.log(`GET /products/${productId}`);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ productId }),
+    };
   }
 
   return {
