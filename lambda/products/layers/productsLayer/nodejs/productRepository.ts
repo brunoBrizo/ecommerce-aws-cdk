@@ -3,10 +3,11 @@ import { v4 as uuid } from "uuid";
 
 export interface Product {
   id: string;
-  productName: string;
+  productName: string; // name is reserved word in DynamoDB
   code: string;
   price: number;
   model: string;
+  productUrl: string; // url is reserved word in DynamoDB
 }
 
 export class ProductRepository {
@@ -68,12 +69,13 @@ export class ProductRepository {
         ConditionExpression: "attribute_exists(id)",
         ReturnValues: "UPDATED_NEW",
         UpdateExpression:
-          "SET productName = :productName, code = :code, price = :price, model = :model",
+          "SET productName = :productName, code = :code, price = :price, model = :model, productUrl = :productUrl",
         ExpressionAttributeValues: {
           ":productName": product.productName,
           ":code": product.code,
           ":price": product.price,
           ":model": product.model,
+          ":productUrl": product.productUrl,
         },
       })
       .promise();
