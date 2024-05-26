@@ -5,7 +5,9 @@ import {
 } from "aws-lambda";
 import { Product, ProductRepository } from "/opt/nodejs/productsLayer";
 import { DynamoDB } from "aws-sdk";
+import * as AwsXRay from "aws-xray-sdk";
 
+AwsXRay.captureAWS(require("aws-sdk"));
 const productsTable = process.env.PRODUCTS_TABLE!;
 const dbClient = new DynamoDB.DocumentClient();
 const productRepository = new ProductRepository(dbClient, productsTable);

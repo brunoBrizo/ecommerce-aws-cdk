@@ -54,6 +54,8 @@ export class ProductsAppStack extends cdk.Stack {
           PRODUCTS_TABLE: this.productsTable.tableName,
         },
         layers: [productsLayer],
+        tracing: lambda.Tracing.ACTIVE,
+        insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_119_0,
       }
     );
 
@@ -77,6 +79,8 @@ export class ProductsAppStack extends cdk.Stack {
           PRODUCTS_TABLE: this.productsTable.tableName,
         },
         layers: [productsLayer],
+        tracing: lambda.Tracing.ACTIVE,
+        insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_119_0,
       }
     );
 
