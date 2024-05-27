@@ -7,6 +7,7 @@ import * as cwLogs from "aws-cdk-lib/aws-logs";
 interface ECommerceApiStackProps extends cdk.StackProps {
   productsFetchHandler: lambdaNodeJS.NodejsFunction;
   productsAdminHandler: lambdaNodeJS.NodejsFunction;
+  ordersHandler: lambdaNodeJS.NodejsFunction;
 }
 
 export class ECommerceApiStack extends cdk.Stack {
@@ -33,6 +34,14 @@ export class ECommerceApiStack extends cdk.Stack {
       },
     });
 
+    this.createProductsService(props, api);
+    this.createOrdersService(props, api);
+  }
+
+  private createProductsService(
+    props: ECommerceApiStackProps,
+    api: apiGateway.RestApi
+  ) {
     const productsFetchIntegration = new apiGateway.LambdaIntegration(
       props.productsFetchHandler
     );
@@ -57,5 +66,43 @@ export class ECommerceApiStack extends cdk.Stack {
 
     // Creates /DELETE /products/{id}
     productsIdResource.addMethod("DELETE", productsAdminIntegration);
+  }
+
+  private createOrdersService(
+    props: ECommerceApiStackProps,
+    api: apiGateway.RestApi
+  ) {
+    const ordersIntegration = new apiGateway.LambdaIntegration(
+      props.ordersHandler
+    );
+
+    // GET /orders
+    // GET /orders?email={email}
+    // GET /orders?email={email}&orderId={orderId}
+    const ordersResource = api.root.addResource("orders");
+    ordersResource.addMethod("GET", ordersIntegration);
+
+    // POST /orders
+    ordersResource.addMethod("POST", ordersIntegration);
+
+    const orderDeleteValidator = new apiGateway.RequestValidator(
+      this,
+      "OrderDeleteValidator",
+      {
+        restApi: api,
+        requestValidatorName: "OrderDeleteValidator",
+        validateRequestBody: false,
+        validateRequestParameters: true,
+      }
+    );
+
+    // DELETE /orders?email={email}&orderId={orderId}
+    ordersResource.addMethod("DELETE", ordersIntegration, {
+      requestParameters: {
+        "method.request.querystring.email": true,
+        "method.request.querystring.orderId": true,
+      },
+      requestValidator: orderDeleteValidator,
+    });
   }
 }

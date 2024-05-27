@@ -46,6 +46,22 @@ export class ProductRepository {
     return data.Item as Product;
   }
 
+  async getProductByIds(ids: string[]): Promise<Product[]> {
+    const keys: { id: string }[] = ids.map((id) => ({ id }));
+
+    const data = await this.dbClient
+      .batchGet({
+        RequestItems: {
+          [this.tableName]: {
+            Keys: keys,
+          },
+        },
+      })
+      .promise();
+
+    return data.Responses![this.tableName] as Product[];
+  }
+
   async createProduct(product: Product): Promise<Product> {
     product.id = uuid();
 

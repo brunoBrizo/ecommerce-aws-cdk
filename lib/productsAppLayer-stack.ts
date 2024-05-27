@@ -11,7 +11,7 @@ export class ProductsAppLayerStack extends cdk.Stack {
       layerVersionName: "ProductsLayer",
       code: lambda.Code.fromAsset("lambda/products/layers/productsLayer"),
       compatibleRuntimes: [lambda.Runtime.NODEJS_20_X],
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // This should be RETAIN for prod
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     new ssm.StringParameter(this, "ProductsLayerVersionArn", {
