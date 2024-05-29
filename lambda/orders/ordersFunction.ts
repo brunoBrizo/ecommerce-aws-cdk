@@ -4,7 +4,7 @@ import {
   Context,
 } from "aws-lambda";
 import { Product, ProductRepository } from "/opt/nodejs/productsLayer";
-import { DynamoDB, Lambda } from "aws-sdk";
+import { DynamoDB, SNS } from "aws-sdk";
 import * as AwsXRay from "aws-xray-sdk";
 import { Order, OrderRepository } from "/opt/nodejs/ordersLayer";
 import {
@@ -15,16 +15,23 @@ import {
   PaymentType,
   ShippingType,
 } from "/opt/nodejs/ordersApiLayer";
+import {
+  OrderEvent,
+  OrderEventType,
+  Envelope,
+} from "/opt/nodejs/orderEventsLayer";
 
 AwsXRay.captureAWS(require("aws-sdk"));
 
 const productsTable = process.env.PRODUCTS_TABLE!;
 const ordersTable = process.env.ORDERS_TABLE!;
+const orderEventsTopicArn = process.env.ORDER_EVENTS_TOPIC_ARN!;
 
 const dbClient = new DynamoDB.DocumentClient();
+const snsClient = new SNS();
+
 const orderRepository = new OrderRepository(dbClient, ordersTable);
 const productRepository = new ProductRepository(dbClient, productsTable);
-const lambdaClient = new Lambda();
 
 export async function handler(
   event: APIGatewayProxyEvent,
@@ -48,6 +55,13 @@ export async function handler(
     if (products.length === orderRequest.productIds.length) {
       const order = buildOrder(orderRequest, products);
       const createdOrder = await orderRepository.create(order);
+
+      const eventResult = await sendOrderEvent(
+        createdOrder,
+        OrderEventType.ORDER_CREATED,
+        lambdaReqId
+      );
+      console.log(`Order Event sent: ${JSON.stringify(eventResult)}`);
 
       return {
         statusCode: 201,
@@ -102,7 +116,15 @@ export async function handler(
     const orderId = event.queryStringParameters!.orderId!;
 
     try {
-      await orderRepository.delete(email, orderId);
+      const orderDeleted = await orderRepository.delete(email, orderId);
+
+      const eventResult = await sendOrderEvent(
+        orderDeleted,
+        OrderEventType.ORDER_DELETED,
+        lambdaReqId
+      );
+      console.log(`Order Event sent: ${JSON.stringify(eventResult)}`);
+
       return {
         statusCode: 204,
         body: "",
@@ -175,4 +197,31 @@ function convertToOrderResponse(order: Order): OrderResponse {
   };
 
   return orderResponse;
+}
+
+function sendOrderEvent(
+  order: Order,
+  eventType: OrderEventType,
+  lambdaRequestId: string
+) {
+  const orderEvent: OrderEvent = {
+    email: order.pk,
+    orderId: order.sk!,
+    productCodes: order.products.map((product) => product.code),
+    billing: order.billing,
+    shipping: order.shipping,
+    requestId: lambdaRequestId,
+  };
+
+  const envelope: Envelope = {
+    eventType,
+    data: JSON.stringify(orderEvent),
+  };
+
+  return snsClient
+    .publish({
+      TopicArn: orderEventsTopicArn,
+      Message: JSON.stringify(envelope),
+    })
+    .promise();
 }
