@@ -59,10 +59,56 @@ export class ECommerceApiStack extends cdk.Stack {
     );
 
     // Creates /POST /products
-    productsResource.addMethod("POST", productsAdminIntegration);
+    const productRequestValidator = new apiGateway.RequestValidator(
+      this,
+      "ProductRequestValidator",
+      {
+        restApi: api,
+        requestValidatorName: "ProductRequestValidator",
+        validateRequestBody: true,
+      }
+    );
+
+    const productModel = new apiGateway.Model(this, "ProductModel", {
+      restApi: api,
+      modelName: "ProductModel",
+      schema: {
+        type: apiGateway.JsonSchemaType.OBJECT,
+        properties: {
+          productName: {
+            type: apiGateway.JsonSchemaType.STRING,
+          },
+          code: {
+            type: apiGateway.JsonSchemaType.STRING,
+          },
+          price: {
+            type: apiGateway.JsonSchemaType.NUMBER,
+          },
+          model: {
+            type: apiGateway.JsonSchemaType.STRING,
+          },
+          productUrl: {
+            type: apiGateway.JsonSchemaType.STRING,
+          },
+        },
+        required: ["productName", "code", "price", "model"],
+      },
+    });
+
+    productsResource.addMethod("POST", productsAdminIntegration, {
+      requestValidator: productRequestValidator,
+      requestModels: {
+        "application/json": productModel,
+      },
+    });
 
     // Creates /PUT /products/{id}
-    productsIdResource.addMethod("PUT", productsAdminIntegration);
+    productsIdResource.addMethod("PUT", productsAdminIntegration, {
+      requestValidator: productRequestValidator,
+      requestModels: {
+        "application/json": productModel,
+      },
+    });
 
     // Creates /DELETE /products/{id}
     productsIdResource.addMethod("DELETE", productsAdminIntegration);
@@ -83,7 +129,47 @@ export class ECommerceApiStack extends cdk.Stack {
     ordersResource.addMethod("GET", ordersIntegration);
 
     // POST /orders
-    ordersResource.addMethod("POST", ordersIntegration);
+    const orderRequestValidator = new apiGateway.RequestValidator(
+      this,
+      "OrderRequestValidator",
+      {
+        restApi: api,
+        requestValidatorName: "OrderRequestValidator",
+        validateRequestBody: true,
+      }
+    );
+
+    const orderModel = new apiGateway.Model(this, "OrderModel", {
+      modelName: "OrderModel",
+      restApi: api,
+      schema: {
+        type: apiGateway.JsonSchemaType.OBJECT,
+        properties: {
+          email: {
+            type: apiGateway.JsonSchemaType.STRING,
+          },
+          productsIds: {
+            type: apiGateway.JsonSchemaType.ARRAY,
+            minItems: 1,
+            items: {
+              type: apiGateway.JsonSchemaType.STRING,
+            },
+          },
+          payment: {
+            type: apiGateway.JsonSchemaType.STRING,
+            enum: ["CASH", "CREDIT_CARD", "DEBIT_CARD"],
+          },
+        },
+        required: ["email", "productsIds", "payment"],
+      },
+    });
+
+    ordersResource.addMethod("POST", ordersIntegration, {
+      requestValidator: orderRequestValidator,
+      requestModels: {
+        "application/json": orderModel,
+      },
+    });
 
     const orderDeleteValidator = new apiGateway.RequestValidator(
       this,
