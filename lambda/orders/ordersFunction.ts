@@ -208,7 +208,7 @@ function sendOrderEvent(
 ) {
   const orderEvent: OrderEvent = {
     email: order.pk,
-    orderId: order.sk!,
+    orderId: order.sk,
     productCodes: order.products.map((product) => product.code),
     billing: order.billing,
     shipping: order.shipping,
@@ -224,6 +224,12 @@ function sendOrderEvent(
     .publish({
       TopicArn: orderEventsTopicArn,
       Message: JSON.stringify(envelope),
+      MessageAttributes: {
+        eventType: {
+          DataType: "String",
+          StringValue: eventType,
+        },
+      },
     })
     .promise();
 }

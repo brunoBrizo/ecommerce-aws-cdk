@@ -42,6 +42,6 @@ function createEvent(body: SNSMessage) {
     },
   };
 
-  console.log(`Order Event - MessageId: ${body.MessageId}`);
+  console.log("Order Event on Orders Event Function: ", body.Message);
   return orderEventsRepository.createOrderEvent(orderEventDdb);
 }
