@@ -20,6 +20,7 @@ import {
   OrderEventType,
   Envelope,
 } from "/opt/nodejs/orderEventsLayer";
+import { v4 as uuid } from "uuid";
 
 AwsXRay.captureAWS(require("aws-sdk"));
 
@@ -54,13 +55,12 @@ export async function handler(
 
     if (products.length === orderRequest.productIds.length) {
       const order = buildOrder(orderRequest, products);
-      const createdOrder = await orderRepository.create(order);
 
-      const eventResult = await sendOrderEvent(
-        createdOrder,
-        OrderEventType.ORDER_CREATED,
-        lambdaReqId
-      );
+      const [createdOrder, eventResult] = await Promise.all([
+        orderRepository.create(order),
+        sendOrderEvent(order, OrderEventType.ORDER_CREATED, lambdaReqId),
+      ]);
+
       console.log(`Order Event sent: ${JSON.stringify(eventResult)}`);
 
       return {
@@ -157,6 +157,8 @@ function buildOrder(orderRequest: OrderRequest, products: Product[]): Order {
 
   const order: Order = {
     pk: orderRequest.email,
+    sk: uuid(),
+    createdAt: Date.now(),
     billing: {
       payment: orderRequest.payment,
       totalPrice,
