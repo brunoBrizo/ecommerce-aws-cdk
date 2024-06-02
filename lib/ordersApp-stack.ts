@@ -7,6 +7,8 @@ import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 
 interface OrdersAppStackProps extends cdk.StackProps {
   productsTable: dynamoDb.Table;
@@ -200,5 +202,63 @@ export class OrdersAppStack extends cdk.Stack {
         },
       })
     );
+
+    // Order Events Queue
+    const orderEventsDlq = new sqs.Queue(this, "OrderEventsDlq", {
+      queueName: "order-events-queue-dlq",
+      retentionPeriod: cdk.Duration.days(14),
+      enforceSSL: false,
+      encryption: sqs.QueueEncryption.UNENCRYPTED,
+    });
+
+    const orderEventsQueue = new sqs.Queue(this, "OrderEventsQueue", {
+      queueName: "order-events-queue",
+      deadLetterQueue: {
+        maxReceiveCount: 3,
+        queue: orderEventsDlq,
+      },
+      enforceSSL: false,
+      encryption: sqs.QueueEncryption.UNENCRYPTED,
+    });
+
+    ordersTopic.addSubscription(
+      new subs.SqsSubscription(orderEventsQueue, {
+        filterPolicy: {
+          eventType: sns.SubscriptionFilter.stringFilter({
+            allowlist: ["ORDER_CREATED"],
+          }),
+        },
+      })
+    );
+
+    // Order Emails Handler
+    const orderEmailsHandler = new lambdaNodeJS.NodejsFunction(
+      this,
+      "OrderEmailsHandler",
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        functionName: "OrderEmailsFunction",
+        entry: "lambda/orders/orderEmailsFunction.ts",
+        handler: "handler",
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(5),
+        bundling: {
+          minify: true,
+          sourceMap: false,
+        },
+        layers: [orderEventsLayer],
+        tracing: lambda.Tracing.ACTIVE,
+        insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_119_0,
+      }
+    );
+
+    orderEmailsHandler.addEventSource(
+      new lambdaEventSources.SqsEventSource(orderEventsQueue, {
+        batchSize: 5, // Optimized for cost, avoid calling Lambda too often
+        enabled: true,
+        maxBatchingWindow: cdk.Duration.seconds(5),
+      })
+    );
+    orderEventsQueue.grantConsumeMessages(orderEmailsHandler);
   }
 }
