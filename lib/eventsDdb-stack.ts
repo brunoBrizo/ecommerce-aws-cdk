@@ -24,5 +24,27 @@ export class EventsDdbStack extends cdk.Stack {
       readCapacity: 1,
       writeCapacity: 1,
     });
+
+    const readScale = this.eventsTable.autoScaleReadCapacity({
+      maxCapacity: 2,
+      minCapacity: 1,
+    });
+
+    readScale.scaleOnUtilization({
+      targetUtilizationPercent: 50,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
+
+    const writeScale = this.eventsTable.autoScaleWriteCapacity({
+      maxCapacity: 2,
+      minCapacity: 1,
+    });
+
+    writeScale.scaleOnUtilization({
+      targetUtilizationPercent: 30,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
   }
 }
