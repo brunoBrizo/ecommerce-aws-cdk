@@ -17,7 +17,7 @@ export interface Order {
     payment: "CREDIT_CARD" | "DEBIT_CARD" | "CASH";
     totalPrice: number;
   };
-  products: OrderProduct[];
+  products?: OrderProduct[];
 }
 
 export class OrderRepository {
@@ -45,6 +45,7 @@ export class OrderRepository {
     const result = await this.dbClient
       .scan({
         TableName: this.tableName,
+        ProjectionExpression: "pk, sk, createdAt, shipping, billing",
       })
       .promise();
 
@@ -59,6 +60,7 @@ export class OrderRepository {
         ExpressionAttributeValues: {
           ":email": email,
         },
+        ProjectionExpression: "pk, sk, createdAt, shipping, billing",
       })
       .promise();
 

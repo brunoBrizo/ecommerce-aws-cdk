@@ -42,5 +42,5 @@ export interface OrderResponse {
     payment: PaymentType;
     totalPrice: number;
   };
-  products: OrderProductResponse[];
+  products?: OrderProductResponse[];
 }

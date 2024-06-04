@@ -19,6 +19,6 @@ export interface OrderEvent {
     payment: string;
     totalPrice: number;
   };
-  productCodes: string[];
+  productCodes?: string[];
   requestId: string;
 }

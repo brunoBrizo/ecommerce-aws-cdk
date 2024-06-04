@@ -176,7 +176,7 @@ function buildOrder(orderRequest: OrderRequest, products: Product[]): Order {
 function convertToOrderResponse(order: Order): OrderResponse {
   const orderProducts: OrderProductResponse[] = [];
 
-  order.products.forEach((product) => {
+  order.products?.forEach((product) => {
     orderProducts.push({
       code: product.code,
       price: product.price,
@@ -185,9 +185,9 @@ function convertToOrderResponse(order: Order): OrderResponse {
 
   const orderResponse: OrderResponse = {
     email: order.pk,
-    id: order.sk!,
+    id: order.sk,
     createdAt: order.createdAt,
-    products: orderProducts,
+    products: orderProducts.length > 0 ? orderProducts : undefined,
     billing: {
       payment: order.billing.payment as PaymentType,
       totalPrice: order.billing.totalPrice,
@@ -209,7 +209,7 @@ function sendOrderEvent(
   const orderEvent: OrderEvent = {
     email: order.pk,
     orderId: order.sk,
-    productCodes: order.products.map((product) => product.code),
+    productCodes: order.products?.map((product) => product.code),
     billing: order.billing,
     shipping: order.shipping,
     requestId: lambdaRequestId,
