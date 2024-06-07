@@ -17,6 +17,7 @@ interface OrdersAppStackProps extends cdk.StackProps {
 
 export class OrdersAppStack extends cdk.Stack {
   readonly ordersHandler: lambdaNodeJS.NodejsFunction;
+  readonly orderEventsFetchHandler: lambdaNodeJS.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: OrdersAppStackProps) {
     super(scope, id, props);
@@ -268,5 +269,37 @@ export class OrdersAppStack extends cdk.Stack {
     });
 
     orderEmailsHandler.addToRolePolicy(orderEmailSesPolicy);
+
+    this.orderEventsFetchHandler = new lambdaNodeJS.NodejsFunction(
+      this,
+      "OrderEventsFetchFunction",
+      {
+        runtime: lambda.Runtime.NODEJS_20_X,
+        functionName: "OrderEventsFetchFunction",
+        entry: "lambda/orders/orderEventsFetchFunction.ts",
+        handler: "handler",
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(5),
+        bundling: {
+          minify: true,
+          sourceMap: false,
+        },
+        environment: {
+          EVENTS_TABLE: props.eventsTable.tableName,
+        },
+        layers: [orderEventsRepositoryLayer],
+        tracing: lambda.Tracing.ACTIVE,
+        insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_119_0,
+      }
+    );
+
+    // Restrict only queries to emailIndex
+    const eventsTableReadPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ["dynamodb:Query"],
+      resources: [`${props.eventsTable.tableArn}/index/emailIndex`],
+    });
+
+    this.orderEventsFetchHandler.addToRolePolicy(eventsTableReadPolicy);
   }
 }
