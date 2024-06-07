@@ -37,6 +37,9 @@
       ],
       "/opt/nodejs/orderEventsRepositoryLayer": [
         "lambda/orders/layers/orderEventsRepositoryLayer/nodejs/orderEventRepository"
+      ],
+      "/opt/nodejs/authUserInfoLayer": [
+        "lambda/auth/layers/authUserInfoLayer/nodejs/authUserInfoLayer"
       ]
     }
   },

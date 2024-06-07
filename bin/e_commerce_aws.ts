@@ -7,6 +7,7 @@ import { ProductsAppLayerStack } from "../lib/productsAppLayer-stack";
 import { EventsDdbStack } from "../lib/eventsDdb-stack";
 import { OrdersAppLayersSatck } from "../lib/ordersAppLayers-stack";
 import { OrdersAppStack } from "../lib/ordersApp-stack";
+import { AuthLayersStack } from "../lib/authLayers-stack";
 
 const app = new cdk.App();
 
@@ -19,6 +20,11 @@ const tags = {
   cost: "ecommerce",
   team: "bruno-aws",
 };
+
+const authLayersStack = new AuthLayersStack(app, "AuthLayers", {
+  tags,
+  env,
+});
 
 const productsAppLayerStack = new ProductsAppLayerStack(
   app,
@@ -42,6 +48,7 @@ const productsAppStack = new ProductsAppStack(app, "ProductsApp", {
 
 productsAppStack.addDependency(productsAppLayerStack);
 productsAppStack.addDependency(eventsDdbStack);
+productsAppStack.addDependency(authLayersStack);
 
 const ordersAppLayerStack = new OrdersAppLayersSatck(app, "OrdersAppLayer", {
   tags,

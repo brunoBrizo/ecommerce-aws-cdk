@@ -4,14 +4,19 @@ import {
   Context,
 } from "aws-lambda";
 import { Product, ProductRepository } from "/opt/nodejs/productsLayer";
-import { DynamoDB, Lambda } from "aws-sdk";
+import { CognitoIdentityServiceProvider, DynamoDB, Lambda } from "aws-sdk";
 import { ProductEvent, ProductEventType } from "/opt/nodejs/productEventsLayer";
 import * as AwsXRay from "aws-xray-sdk";
+import { AuthInfoService } from "/opt/nodejs/authUserInfoLayer";
 
 AwsXRay.captureAWS(require("aws-sdk"));
 
 const productsTable = process.env.PRODUCTS_TABLE!;
 const productEventsFuncionName = process.env.PRODUCT_EVENTS_FUNCTION_NAME!;
+
+// Auth
+const cognitoIdentityServiceProvider = new CognitoIdentityServiceProvider();
+const authInfoService = new AuthInfoService(cognitoIdentityServiceProvider);
 
 const dbClient = new DynamoDB.DocumentClient();
 const productRepository = new ProductRepository(dbClient, productsTable);
@@ -28,6 +33,10 @@ export async function handler(
   console.log(`Lambda Request ID: ${lambdaReqId}`);
   console.log(`APIGateway Request ID: ${apiReqId}`);
 
+  const userEmail = await authInfoService.getUserInfo(
+    event.requestContext.authorizer
+  );
+
   if (event.resource === "/products") {
     if (httpMethod === "POST") {
       console.log("POST /products");
@@ -38,7 +47,7 @@ export async function handler(
       const invokationResponse = await sendProductEvent(
         createdProduct,
         ProductEventType.CREATED,
-        "no-email-for-now@gmail.com",
+        userEmail,
         lambdaReqId
       );
 
@@ -66,7 +75,7 @@ export async function handler(
         const invokationResponse = await sendProductEvent(
           updatedProduct,
           ProductEventType.UPDATED,
-          "no-email-for-now@gmail.com",
+          userEmail,
           lambdaReqId
         );
 
@@ -91,7 +100,7 @@ export async function handler(
         const invocationResponse = await sendProductEvent(
           product,
           ProductEventType.DELETED,
-          "no-email-for-now@gmail.com",
+          userEmail,
           lambdaReqId
         );
 
